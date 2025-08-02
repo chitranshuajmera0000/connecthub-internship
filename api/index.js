@@ -11,25 +11,19 @@ export default async function handler(req, res) {
   const { method, url } = req;
   const path = url.replace('/api', '');
 
-  // Health check - always works
+  // Simple test first
   if (method === 'GET' && path === '/health') {
-    return res.json({ 
-      status: 'OK', 
-      timestamp: new Date().toISOString(),
-      path,
-      method,
-      env: {
-        hasDb: !!process.env.DATABASE_URL,
-        hasJwt: !!process.env.JWT_SECRET
-      }
-    });
+    return res.json({ status: 'OK', test: 'minimal' });
   }
 
   try {
-    // Dynamic imports for serverless
+    // Dynamic imports for serverless with proper default imports
     const { PrismaClient } = await import('@prisma/client');
-    const bcrypt = await import('bcryptjs');
-    const jwt = await import('jsonwebtoken');
+    const bcryptModule = await import('bcryptjs');
+    const jwtModule = await import('jsonwebtoken');
+    
+    const bcrypt = bcryptModule.default;
+    const jwt = jwtModule.default;
 
     const prisma = new PrismaClient();
 
