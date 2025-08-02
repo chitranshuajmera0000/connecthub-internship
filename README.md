@@ -1,6 +1,197 @@
-# ConnectHub - Mini LinkedIn Clone
+# ConnectHub - LinkedIn-like Community Platform
 
-A modern, full-stack community platform built with React, Node.js, Express, and Prisma. This application provides a LinkedIn-like experience with user authentication, profile management, and social posting features.
+> **CIAAN Cyber Tech Internship Challenge Submission**  
+> A modern, full-stack professional networking platform built with React, Node.js, and PostgreSQL.
+
+## 🌟 **Live Demo**
+
+🔗 **Live Application**: [Deploy URL - Coming Soon]  
+📦 **GitHub Repository**: https://github.com/chitranshuajmera0000/connecthub-internship
+
+### 🧪 **Demo Account Credentials**
+```
+👤 Main Demo Account:
+   Email: demo@connecthub.com
+   Password: demo123
+
+👤 User Demo Account:
+   Email: sarah.johnson@connecthub.com
+   Password: password123
+```
+
+---
+
+## ✅ **Challenge Requirements - All Completed**
+
+### 1. **User Authentication** ✅
+- ✅ Register/Login with Email & Password
+- ✅ Profile with name, email, bio
+- ✅ Secure JWT authentication
+- ✅ Password hashing with bcryptjs
+
+### 2. **Public Post Feed** ✅
+- ✅ Create, read, display text-only posts
+- ✅ Home feed with author's name and timestamp
+- ✅ Real-time post creation and deletion
+
+### 3. **Profile Page** ✅
+- ✅ View user's profile and their posts
+- ✅ Profile editing functionality
+- ✅ Clickable user profiles from posts
+
+### 4. **Tech Stack** ✅
+- ✅ **Frontend**: React 18 + TypeScript + Tailwind CSS
+- ✅ **Backend**: Node.js + Express
+- ✅ **Database**: PostgreSQL + Prisma ORM
+
+---
+
+## 🛠️ **Tech Stack Used**
+
+### **Frontend**
+- **React 18** with TypeScript for type safety
+- **Tailwind CSS** for modern, responsive styling
+- **Vite** for fast development and optimized builds
+- **Lucide React** for professional icons
+
+### **Backend**
+- **Node.js** with Express framework
+- **JWT** for secure authentication
+- **bcryptjs** for password hashing
+- **Helmet** + **CORS** + **Rate Limiting** for security
+
+### **Database**
+- **PostgreSQL** as primary database
+- **Prisma ORM** for type-safe database operations
+- **Database seeding** with realistic demo data
+
+### **Additional Features**
+- **Client-side caching** for performance optimization
+- **Responsive design** for mobile, tablet, and desktop
+- **Modern UI/UX** with LinkedIn-inspired design
+- **Error handling** and loading states
+
+---
+
+## 🚀 **Setup Instructions**
+
+### **Prerequisites**
+- Node.js 18+
+- PostgreSQL database
+- npm or yarn
+
+### **1. Clone Repository**
+```bash
+git clone https://github.com/chitranshuajmera0000/connecthub-internship.git
+cd connecthub-internship
+```
+
+### **2. Install Dependencies**
+```bash
+npm install
+```
+
+### **3. Environment Configuration**
+Create `.env` file in the root directory:
+```env
+# Database Configuration
+DATABASE_URL="postgresql://username:password@localhost:5432/connecthub"
+
+# JWT Secret (Generate a secure random string)
+JWT_SECRET="your-super-secret-jwt-key-here-make-it-long-and-random"
+
+# Server Configuration
+PORT=3001
+NODE_ENV=development
+```
+
+### **4. Database Setup**
+```bash
+# Generate Prisma client
+npm run db:generate
+
+# Apply database schema
+npm run db:push
+
+# Seed database with demo data
+npm run db:seed
+```
+
+### **5. Start Application**
+```bash
+# Start both frontend and backend
+npm run dev
+```
+
+**Application URLs:**
+- **Frontend**: http://localhost:5173
+- **Backend API**: http://localhost:3001
+
+---
+
+## 🔐 **Demo Account Details**
+
+### **Demo Account #1 - General Testing**
+```
+Email: demo@connecthub.com
+Password: demo123
+Role: Demo account with welcome content
+```
+
+### **Demo Account #2 - Full Stack Developer**
+```
+Email: sarah.johnson@connecthub.com
+Password: password123
+Role: Sample user with professional posts and profile
+```
+
+### **Additional Accounts** (All use password: `password123`)
+- michael.chen@connecthub.com (Product Manager)
+- emily.rodriguez@connecthub.com (UX/UI Designer)
+- david.kim@connecthub.com (DevOps Engineer)
+- jessica.williams@connecthub.com (Data Scientist)
+
+---
+
+## 📁 **Project Structure**
+
+```
+connecthub-internship/
+├── src/                    # Frontend React application
+│   ├── components/         # Reusable UI components
+│   ├── pages/             # Main application pages
+│   ├── contexts/          # React context providers
+│   ├── utils/             # Utility functions & API
+│   └── App.tsx            # Main app component
+├── server/                # Backend Express server
+│   ├── routes/            # API route handlers
+│   ├── middleware/        # Authentication middleware
+│   └── index.js           # Server entry point
+├── prisma/               # Database schema & seeding
+│   ├── schema.prisma     # Database schema
+│   └── seed.js           # Database seeding script
+├── package.json          # Dependencies & scripts
+└── README.md            # This file
+```
+
+---
+
+## 📝 **Submission Details**
+
+**Submitted by**: Chitranshu Ajmera  
+**Email**: [Your Email]  
+**Submission Date**: August 2, 2025  
+**Challenge**: CIAAN Cyber Tech Full Stack Development Internship  
+
+### **Evaluation Criteria Met**
+✅ **Code Quality** - Clean, well-structured TypeScript code  
+✅ **Responsiveness** - Mobile-first responsive design  
+✅ **UI/UX** - Professional LinkedIn-inspired interface  
+✅ **Functionality** - All required features + bonus features  
+
+---
+
+**Built with ❤️ for the CIAAN Cyber Tech Internship Challenge**
 
 ## 🌟 **Live Demo**
 
