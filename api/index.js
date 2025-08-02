@@ -2,7 +2,18 @@ import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 
-const prisma = new PrismaClient();
+// Initialize Prisma client with production config
+const prisma = global.prisma || new PrismaClient({
+  datasources: {
+    db: {
+      url: process.env.DATABASE_URL,
+    },
+  },
+});
+
+if (process.env.NODE_ENV !== 'production') {
+  global.prisma = prisma;
+}
 
 export default async function handler(req, res) {
   // Enable CORS
