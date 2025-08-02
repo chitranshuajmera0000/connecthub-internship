@@ -159,9 +159,9 @@ export default async function handler(req, res) {
       }
 
       // USER PROFILE
-      const userMatch = path.match(/^\/users\/(\d+)$/);
+      const userMatch = path.match(/^\/users\/([a-zA-Z0-9]+)$/);
       if (userMatch && method === 'GET') {
-        const userId = parseInt(userMatch[1]);
+        const userId = userMatch[1];
         const user = await prisma.user.findUnique({
           where: { id: userId },
           select: { id: true, name: true, email: true, bio: true, createdAt: true }
@@ -177,9 +177,9 @@ export default async function handler(req, res) {
       }
 
       // USER POSTS
-      const userPostsMatch = path.match(/^\/users\/(\d+)\/posts$/);
+      const userPostsMatch = path.match(/^\/users\/([a-zA-Z0-9]+)\/posts$/);
       if (userPostsMatch && method === 'GET') {
-        const userId = parseInt(userPostsMatch[1]);
+        const userId = userPostsMatch[1];
         
         const posts = await prisma.post.findMany({
           where: { authorId: userId },
@@ -192,9 +192,9 @@ export default async function handler(req, res) {
       }
 
       // DELETE POST
-      const deletePostMatch = path.match(/^\/posts\/(\d+)$/);
+      const deletePostMatch = path.match(/^\/posts\/([a-zA-Z0-9]+)$/);
       if (deletePostMatch && method === 'DELETE') {
-        const postId = parseInt(deletePostMatch[1]);
+        const postId = deletePostMatch[1];
         const token = req.headers.authorization?.replace('Bearer ', '');
         
         if (!token) {
@@ -225,7 +225,7 @@ export default async function handler(req, res) {
 
       // UPDATE USER PROFILE
       if (userMatch && method === 'PUT') {
-        const userId = parseInt(userMatch[1]);
+        const userId = userMatch[1];
         const token = req.headers.authorization?.replace('Bearer ', '');
         
         if (!token) {
