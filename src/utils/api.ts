@@ -1,6 +1,6 @@
 import { cache, CACHE_KEYS, CACHE_TTL } from './cache';
 
-// Always use Vercel API for production deployment
+// Force Vercel API deployment - updated
 const API_BASE_URL = 'https://connecthub-internship.vercel.app/api';
 
 class ApiError extends Error {
