@@ -5,7 +5,7 @@
 
 ## 🌟 **Live Demo**
 
-🔗 **Live Application**: [Deploy URL - Coming Soon]  
+🔗 **Live Application**: https://connecthub-internship.vercel.app/  
 📦 **GitHub Repository**: https://github.com/chitranshuajmera0000/connecthub-internship
 
 ### 🧪 **Demo Account Credentials**
@@ -200,9 +200,8 @@ connecthub-internship/
 
 ## 🌟 **Live Demo**
 
-- **🌐 Frontend**: [Coming Soon - Deploy to Vercel]
-- **⚡ Backend API**: [Coming Soon - Deploy to Railway] 
-- **📱 Try it now**: Register or use demo account
+🔗 **Live Application**: https://connecthub-internship.vercel.app/  
+📱 **Try it now**: Register or use demo account
 
 ### **🧪 Demo Account**
 ```

@@ -97,6 +97,7 @@ const Login: React.FC<LoginProps> = ({ onSwitchToRegister }) => {
                 value={formData.password}
                 onChange={handleChange}
                 required
+                autoComplete="current-password"
                 className="w-full p-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                 placeholder="Enter your password"
                 disabled={isSubmitting}

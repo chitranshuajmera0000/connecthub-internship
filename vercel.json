@@ -1,6 +1,5 @@
 {
   "version": 2,
-  "name": "connecthub",
   "builds": [
     {
       "src": "package.json",
@@ -10,14 +9,14 @@
       }
     },
     {
-      "src": "server/index.js",
+      "src": "api/index.js",
       "use": "@vercel/node"
     }
   ],
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "/server/index.js"
+      "dest": "/api/index.js"
     },
     {
       "handle": "filesystem"
@@ -26,8 +25,5 @@
       "src": "/(.*)",
       "dest": "/index.html"
     }
-  ],
-  "env": {
-    "NODE_ENV": "production"
-  }
+  ]
 }

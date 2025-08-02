@@ -2,15 +2,11 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
-import authRoutes from './routes/auth.js';
-import postRoutes from './routes/posts.js';
-import userRoutes from './routes/users.js';
-import dotenv from 'dotenv';
-
-dotenv.config();
+import authRoutes from '../server/routes/auth.js';
+import postRoutes from '../server/routes/posts.js';
+import userRoutes from '../server/routes/users.js';
 
 const app = express();
-const PORT = process.env.PORT || 3001;
 
 // Security middleware
 app.use(helmet());
@@ -24,7 +20,7 @@ const corsOptions = {
     const allowedOrigins = [
       'http://localhost:5173',
       'http://localhost:3000',
-      'https://connecthubinternship.vercel.app',
+      'https://connecthub-internship.vercel.app',
       /\.vercel\.app$/
     ];
     
@@ -61,12 +57,12 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
 // Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/posts', postRoutes);
-app.use('/api/users', userRoutes);
+app.use('/auth', authRoutes);
+app.use('/posts', postRoutes);
+app.use('/users', userRoutes);
 
 // Health check
-app.get('/api/health', (req, res) => {
+app.get('/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
@@ -80,17 +76,9 @@ app.use((err, req, res, next) => {
 });
 
 // 404 handler for API routes
-app.use('/api/*', (req, res) => {
+app.use('*', (req, res) => {
   res.status(404).json({ error: 'API route not found' });
 });
-
-// For Vercel serverless deployment
-if (process.env.NODE_ENV !== 'production') {
-  app.listen(PORT, () => {
-    console.log(`🚀 Server running on port ${PORT}`);
-    console.log(`📱 Environment: ${process.env.NODE_ENV || 'development'}`);
-  });
-}
 
 // Export for Vercel serverless function
 export default app;
