@@ -8,73 +8,70 @@ export default async function handler(req, res) {
     return res.status(200).end();
   }
 
-  // Simple health check first
   const { method, url } = req;
   const path = url.replace('/api', '');
 
+  // Health check - always works
   if (method === 'GET' && path === '/health') {
     return res.json({ 
       status: 'OK', 
       timestamp: new Date().toISOString(),
-      path: path,
-      method: method
+      path,
+      method,
+      env: {
+        hasDb: !!process.env.DATABASE_URL,
+        hasJwt: !!process.env.JWT_SECRET
+      }
     });
   }
 
   try {
-    // Import Prisma and other modules
+    // Dynamic imports for serverless
     const { PrismaClient } = await import('@prisma/client');
     const bcrypt = await import('bcryptjs');
     const jwt = await import('jsonwebtoken');
 
-    // Initialize Prisma
-    const prisma = new PrismaClient({
-      datasources: {
-        db: {
-          url: process.env.DATABASE_URL
-        }
-      }
-    });
+    const prisma = new PrismaClient();
 
-    console.log(`Processing: ${method} ${path}`);
-
-    // Auth routes
-    if (path === '/auth/login' && method === 'POST') {
+    // AUTH ENDPOINTS
+    if (method === 'POST' && path === '/auth/login') {
       const { email, password } = req.body;
       
       if (!email || !password) {
-        return res.status(400).json({ error: 'Missing email or password' });
+        return res.status(400).json({ error: 'Email and password required' });
       }
 
       const user = await prisma.user.findUnique({ where: { email } });
       if (!user) {
+        await prisma.$disconnect();
         return res.status(400).json({ error: 'Invalid credentials' });
       }
 
-      const isValidPassword = await bcrypt.compare(password, user.password);
-      if (!isValidPassword) {
+      const isValid = await bcrypt.compare(password, user.password);
+      if (!isValid) {
+        await prisma.$disconnect();
         return res.status(400).json({ error: 'Invalid credentials' });
       }
 
       const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn: '7d' });
       
       await prisma.$disconnect();
-      
       return res.json({
         token,
         user: { id: user.id, name: user.name, email: user.email, bio: user.bio }
       });
     }
 
-    if (path === '/auth/register' && method === 'POST') {
+    if (method === 'POST' && path === '/auth/register') {
       const { name, email, password } = req.body;
       
       if (!name || !email || !password) {
-        return res.status(400).json({ error: 'Missing required fields' });
+        return res.status(400).json({ error: 'All fields required' });
       }
 
-      const existingUser = await prisma.user.findUnique({ where: { email } });
-      if (existingUser) {
+      const existing = await prisma.user.findUnique({ where: { email } });
+      if (existing) {
+        await prisma.$disconnect();
         return res.status(400).json({ error: 'User already exists' });
       }
 
@@ -86,17 +83,16 @@ export default async function handler(req, res) {
       const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn: '7d' });
       
       await prisma.$disconnect();
-      
       return res.json({
         token,
         user: { id: user.id, name: user.name, email: user.email, bio: user.bio }
       });
     }
 
-    if (path === '/auth/me' && method === 'GET') {
+    if (method === 'GET' && path === '/auth/me') {
       const token = req.headers.authorization?.replace('Bearer ', '');
       if (!token) {
-        return res.status(401).json({ error: 'No token provided' });
+        return res.status(401).json({ error: 'No token' });
       }
 
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
@@ -106,30 +102,49 @@ export default async function handler(req, res) {
       });
       
       if (!user) {
+        await prisma.$disconnect();
         return res.status(404).json({ error: 'User not found' });
       }
 
       await prisma.$disconnect();
-      
       return res.json({ user });
     }
 
-    // Posts routes
-    if (path === '/posts' && method === 'GET') {
+    // POSTS ENDPOINTS
+    if (method === 'GET' && path === '/posts') {
       const posts = await prisma.post.findMany({
         include: { author: { select: { id: true, name: true, email: true } } },
         orderBy: { createdAt: 'desc' }
       });
       
       await prisma.$disconnect();
-      
       return res.json({ posts });
     }
 
-    // User routes
+    if (method === 'POST' && path === '/posts') {
+      const token = req.headers.authorization?.replace('Bearer ', '');
+      if (!token) {
+        return res.status(401).json({ error: 'No token' });
+      }
+
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      const { content } = req.body;
+
+      if (!content) {
+        return res.status(400).json({ error: 'Content required' });
+      }
+
+      const post = await prisma.post.create({
+        data: { content, authorId: decoded.userId },
+        include: { author: { select: { id: true, name: true, email: true } } }
+      });
+
+      await prisma.$disconnect();
+      return res.json({ post });
+    }
+
+    // USER ENDPOINTS
     const userMatch = path.match(/^\/users\/(\d+)$/);
-    const userPostsMatch = path.match(/^\/users\/(\d+)\/posts$/);
-    
     if (userMatch && method === 'GET') {
       const userId = parseInt(userMatch[1]);
       const user = await prisma.user.findUnique({
@@ -143,25 +158,13 @@ export default async function handler(req, res) {
       }
 
       await prisma.$disconnect();
-      
       return res.json({ user });
     }
 
+    const userPostsMatch = path.match(/^\/users\/(\d+)\/posts$/);
     if (userPostsMatch && method === 'GET') {
       const userId = parseInt(userPostsMatch[1]);
       
-      // Check if user exists
-      const user = await prisma.user.findUnique({
-        where: { id: userId },
-        select: { id: true }
-      });
-      
-      if (!user) {
-        await prisma.$disconnect();
-        return res.status(404).json({ error: 'User not found' });
-      }
-
-      // Get user's posts
       const posts = await prisma.post.findMany({
         where: { authorId: userId },
         include: { author: { select: { id: true, name: true, email: true } } },
@@ -169,47 +172,21 @@ export default async function handler(req, res) {
       });
       
       await prisma.$disconnect();
-      
       return res.json({ posts });
     }
 
-    // Handle POST requests to create posts
-    if (path === '/posts' && method === 'POST') {
-      const token = req.headers.authorization?.replace('Bearer ', '');
-      if (!token) {
-        return res.status(401).json({ error: 'No token provided' });
-      }
-
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      const { content } = req.body;
-
-      if (!content) {
-        return res.status(400).json({ error: 'Content is required' });
-      }
-
-      const post = await prisma.post.create({
-        data: { content, authorId: decoded.userId },
-        include: { author: { select: { id: true, name: true, email: true } } }
-      });
-
-      await prisma.$disconnect();
-
-      return res.json({ post });
-    }
-
-    // Handle DELETE requests to delete posts
+    // DELETE POST
     const deletePostMatch = path.match(/^\/posts\/(\d+)$/);
     if (deletePostMatch && method === 'DELETE') {
       const postId = parseInt(deletePostMatch[1]);
       const token = req.headers.authorization?.replace('Bearer ', '');
       
       if (!token) {
-        return res.status(401).json({ error: 'No token provided' });
+        return res.status(401).json({ error: 'No token' });
       }
 
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
       
-      // Check if post exists and belongs to user
       const post = await prisma.post.findUnique({
         where: { id: postId },
         select: { authorId: true }
@@ -222,40 +199,34 @@ export default async function handler(req, res) {
       
       if (post.authorId !== decoded.userId) {
         await prisma.$disconnect();
-        return res.status(403).json({ error: 'Not authorized to delete this post' });
+        return res.status(403).json({ error: 'Not authorized' });
       }
 
-      await prisma.post.delete({
-        where: { id: postId }
-      });
-
+      await prisma.post.delete({ where: { id: postId } });
       await prisma.$disconnect();
-
-      return res.json({ message: 'Post deleted successfully' });
+      return res.json({ message: 'Post deleted' });
     }
 
-    // Handle PUT requests to update user profile
-    const updateUserMatch = path.match(/^\/users\/(\d+)$/);
-    if (updateUserMatch && method === 'PUT') {
-      const userId = parseInt(updateUserMatch[1]);
+    // UPDATE USER PROFILE
+    if (userMatch && method === 'PUT') {
+      const userId = parseInt(userMatch[1]);
       const token = req.headers.authorization?.replace('Bearer ', '');
       
       if (!token) {
-        return res.status(401).json({ error: 'No token provided' });
+        return res.status(401).json({ error: 'No token' });
       }
 
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
       
       if (decoded.userId !== userId) {
         await prisma.$disconnect();
-        return res.status(403).json({ error: 'Not authorized to update this profile' });
+        return res.status(403).json({ error: 'Not authorized' });
       }
 
       const { name, bio } = req.body;
       
       if (!name) {
-        await prisma.$disconnect();
-        return res.status(400).json({ error: 'Name is required' });
+        return res.status(400).json({ error: 'Name required' });
       }
 
       const updatedUser = await prisma.user.update({
@@ -265,29 +236,17 @@ export default async function handler(req, res) {
       });
 
       await prisma.$disconnect();
-
       return res.json({ user: updatedUser });
     }
 
     await prisma.$disconnect();
-    
-    return res.status(404).json({ error: 'Route not found', path, method });
+    return res.status(404).json({ error: 'Endpoint not found', path, method });
     
   } catch (error) {
     console.error('API Error:', error);
-    
-    // Ensure Prisma disconnects even on error
-    try {
-      const { PrismaClient } = await import('@prisma/client');
-      const prisma = new PrismaClient();
-      await prisma.$disconnect();
-    } catch (disconnectError) {
-      console.error('Disconnect error:', disconnectError);
-    }
-    
     return res.status(500).json({ 
-      error: 'Internal server error', 
-      message: error.message
+      error: 'Server error', 
+      message: error.message 
     });
   }
 }
