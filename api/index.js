@@ -1,3 +1,9 @@
+import { PrismaClient } from '@prisma/client';
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
+
+const prisma = new PrismaClient();
+
 export default async function handler(req, res) {
   // Enable CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -9,13 +15,6 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Import inside the function to avoid cold start issues
-    const { PrismaClient } = await import('@prisma/client');
-    const bcrypt = await import('bcryptjs');
-    const jwt = await import('jsonwebtoken');
-
-    const prisma = new PrismaClient();
-
     const { method, url } = req;
     const path = url.replace('/api', '');
 
@@ -23,7 +22,15 @@ export default async function handler(req, res) {
 
     // Health check
     if (method === 'GET' && path === '/health') {
-      return res.json({ status: 'OK', timestamp: new Date().toISOString(), env: !!process.env.DATABASE_URL });
+      return res.json({ 
+        status: 'OK', 
+        timestamp: new Date().toISOString(), 
+        env: {
+          hasDb: !!process.env.DATABASE_URL,
+          hasJwt: !!process.env.JWT_SECRET,
+          nodeEnv: process.env.NODE_ENV
+        }
+      });
     }
 
     // Auth routes
@@ -76,6 +83,25 @@ export default async function handler(req, res) {
           token,
           user: { id: user.id, name: user.name, email: user.email, bio: user.bio }
         });
+      }
+
+      if (method === 'GET' && path === '/auth/me') {
+        const token = req.headers.authorization?.replace('Bearer ', '');
+        if (!token) {
+          return res.status(401).json({ error: 'No token provided' });
+        }
+
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const user = await prisma.user.findUnique({
+          where: { id: decoded.userId },
+          select: { id: true, name: true, email: true, bio: true, createdAt: true }
+        });
+        
+        if (!user) {
+          return res.status(404).json({ error: 'User not found' });
+        }
+
+        return res.json({ user });
       }
     }
 
