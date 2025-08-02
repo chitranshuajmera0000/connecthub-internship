@@ -1,84 +1,123 @@
-import express from 'express';
-import cors from 'cors';
-import helmet from 'helmet';
-import rateLimit from 'express-rate-limit';
-import authRoutes from '../server/routes/auth.js';
-import postRoutes from '../server/routes/posts.js';
-import userRoutes from '../server/routes/users.js';
+import { PrismaClient } from '@prisma/client';
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
 
-const app = express();
+const prisma = new PrismaClient();
 
-// Security middleware
-app.use(helmet());
+export default async function handler(req, res) {
+  // Enable CORS
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
 
-// Configure CORS for Vercel deployment
-const corsOptions = {
-  origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
-    
-    const allowedOrigins = [
-      'http://localhost:5173',
-      'http://localhost:3000',
-      'https://connecthub-internship.vercel.app',
-      /\.vercel\.app$/
-    ];
-    
-    const isAllowed = allowedOrigins.some(allowedOrigin => {
-      if (typeof allowedOrigin === 'string') {
-        return origin === allowedOrigin;
-      } else {
-        return allowedOrigin.test(origin);
-      }
-    });
-    
-    if (isAllowed) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
+  try {
+    const { method, url } = req;
+    const path = url.replace('/api', '');
+
+    // Health check
+    if (method === 'GET' && path === '/health') {
+      return res.json({ status: 'OK', timestamp: new Date().toISOString() });
     }
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-};
 
-app.use(cors(corsOptions));
+    // Auth routes
+    if (path.startsWith('/auth')) {
+      if (method === 'POST' && path === '/auth/register') {
+        const { name, email, password } = req.body;
+        
+        const existingUser = await prisma.user.findUnique({ where: { email } });
+        if (existingUser) {
+          return res.status(400).json({ error: 'User already exists' });
+        }
 
-// Rate limiting
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100 // limit each IP to 100 requests per windowMs
-});
-app.use(limiter);
+        const hashedPassword = await bcrypt.hash(password, 12);
+        const user = await prisma.user.create({
+          data: { name, email, password: hashedPassword }
+        });
 
-// Body parsing middleware
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true }));
+        const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn: '7d' });
+        
+        return res.json({
+          token,
+          user: { id: user.id, name: user.name, email: user.email, bio: user.bio }
+        });
+      }
 
-// Routes
-app.use('/auth', authRoutes);
-app.use('/posts', postRoutes);
-app.use('/users', userRoutes);
+      if (method === 'POST' && path === '/auth/login') {
+        const { email, password } = req.body;
+        
+        const user = await prisma.user.findUnique({ where: { email } });
+        if (!user) {
+          return res.status(400).json({ error: 'Invalid credentials' });
+        }
 
-// Health check
-app.get('/health', (req, res) => {
-  res.json({ status: 'OK', timestamp: new Date().toISOString() });
-});
+        const isValidPassword = await bcrypt.compare(password, user.password);
+        if (!isValidPassword) {
+          return res.status(400).json({ error: 'Invalid credentials' });
+        }
 
-// Error handling middleware
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({ 
-    error: 'Something went wrong!',
-    message: process.env.NODE_ENV === 'development' ? err.message : 'Internal server error'
-  });
-});
+        const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn: '7d' });
+        
+        return res.json({
+          token,
+          user: { id: user.id, name: user.name, email: user.email, bio: user.bio }
+        });
+      }
+    }
 
-// 404 handler for API routes
-app.use('*', (req, res) => {
-  res.status(404).json({ error: 'API route not found' });
-});
+    // Posts routes
+    if (path.startsWith('/posts')) {
+      if (method === 'GET' && path === '/posts') {
+        const posts = await prisma.post.findMany({
+          include: { author: { select: { id: true, name: true, email: true } } },
+          orderBy: { createdAt: 'desc' }
+        });
+        return res.json({ posts });
+      }
 
-// Export for Vercel serverless function
-export default app;
+      if (method === 'POST' && path === '/posts') {
+        const token = req.headers.authorization?.replace('Bearer ', '');
+        if (!token) {
+          return res.status(401).json({ error: 'No token provided' });
+        }
+
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const { content } = req.body;
+
+        const post = await prisma.post.create({
+          data: { content, authorId: decoded.userId },
+          include: { author: { select: { id: true, name: true, email: true } } }
+        });
+
+        return res.json({ post });
+      }
+    }
+
+    // Users routes
+    if (path.startsWith('/users')) {
+      const userIdMatch = path.match(/^\/users\/(\d+)$/);
+      if (method === 'GET' && userIdMatch) {
+        const userId = parseInt(userIdMatch[1]);
+        const user = await prisma.user.findUnique({
+          where: { id: userId },
+          select: { id: true, name: true, email: true, bio: true, createdAt: true }
+        });
+        
+        if (!user) {
+          return res.status(404).json({ error: 'User not found' });
+        }
+
+        return res.json({ user });
+      }
+    }
+
+    return res.status(404).json({ error: 'Route not found' });
+    
+  } catch (error) {
+    console.error('API Error:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+}
