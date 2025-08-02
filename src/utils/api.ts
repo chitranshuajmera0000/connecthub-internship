@@ -1,7 +1,10 @@
 import { cache, CACHE_KEYS, CACHE_TTL } from './cache';
 
+// Use Vercel serverless API in production, localhost in development
 const API_BASE_URL = import.meta.env.VITE_API_URL || (
-  import.meta.env.PROD ? '/api' : 'http://localhost:3001/api'
+  import.meta.env.PROD ? 
+    `${window.location.origin}/api` : 
+    'http://localhost:3001/api'
 );
 
 class ApiError extends Error {
