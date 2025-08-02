@@ -128,6 +128,8 @@ export default async function handler(req, res) {
 
     // User routes
     const userMatch = path.match(/^\/users\/(\d+)$/);
+    const userPostsMatch = path.match(/^\/users\/(\d+)\/posts$/);
+    
     if (userMatch && method === 'GET') {
       const userId = parseInt(userMatch[1]);
       const user = await prisma.user.findUnique({
@@ -143,6 +145,128 @@ export default async function handler(req, res) {
       await prisma.$disconnect();
       
       return res.json({ user });
+    }
+
+    if (userPostsMatch && method === 'GET') {
+      const userId = parseInt(userPostsMatch[1]);
+      
+      // Check if user exists
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { id: true }
+      });
+      
+      if (!user) {
+        await prisma.$disconnect();
+        return res.status(404).json({ error: 'User not found' });
+      }
+
+      // Get user's posts
+      const posts = await prisma.post.findMany({
+        where: { authorId: userId },
+        include: { author: { select: { id: true, name: true, email: true } } },
+        orderBy: { createdAt: 'desc' }
+      });
+      
+      await prisma.$disconnect();
+      
+      return res.json({ posts });
+    }
+
+    // Handle POST requests to create posts
+    if (path === '/posts' && method === 'POST') {
+      const token = req.headers.authorization?.replace('Bearer ', '');
+      if (!token) {
+        return res.status(401).json({ error: 'No token provided' });
+      }
+
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      const { content } = req.body;
+
+      if (!content) {
+        return res.status(400).json({ error: 'Content is required' });
+      }
+
+      const post = await prisma.post.create({
+        data: { content, authorId: decoded.userId },
+        include: { author: { select: { id: true, name: true, email: true } } }
+      });
+
+      await prisma.$disconnect();
+
+      return res.json({ post });
+    }
+
+    // Handle DELETE requests to delete posts
+    const deletePostMatch = path.match(/^\/posts\/(\d+)$/);
+    if (deletePostMatch && method === 'DELETE') {
+      const postId = parseInt(deletePostMatch[1]);
+      const token = req.headers.authorization?.replace('Bearer ', '');
+      
+      if (!token) {
+        return res.status(401).json({ error: 'No token provided' });
+      }
+
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      
+      // Check if post exists and belongs to user
+      const post = await prisma.post.findUnique({
+        where: { id: postId },
+        select: { authorId: true }
+      });
+      
+      if (!post) {
+        await prisma.$disconnect();
+        return res.status(404).json({ error: 'Post not found' });
+      }
+      
+      if (post.authorId !== decoded.userId) {
+        await prisma.$disconnect();
+        return res.status(403).json({ error: 'Not authorized to delete this post' });
+      }
+
+      await prisma.post.delete({
+        where: { id: postId }
+      });
+
+      await prisma.$disconnect();
+
+      return res.json({ message: 'Post deleted successfully' });
+    }
+
+    // Handle PUT requests to update user profile
+    const updateUserMatch = path.match(/^\/users\/(\d+)$/);
+    if (updateUserMatch && method === 'PUT') {
+      const userId = parseInt(updateUserMatch[1]);
+      const token = req.headers.authorization?.replace('Bearer ', '');
+      
+      if (!token) {
+        return res.status(401).json({ error: 'No token provided' });
+      }
+
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      
+      if (decoded.userId !== userId) {
+        await prisma.$disconnect();
+        return res.status(403).json({ error: 'Not authorized to update this profile' });
+      }
+
+      const { name, bio } = req.body;
+      
+      if (!name) {
+        await prisma.$disconnect();
+        return res.status(400).json({ error: 'Name is required' });
+      }
+
+      const updatedUser = await prisma.user.update({
+        where: { id: userId },
+        data: { name, bio: bio || '' },
+        select: { id: true, name: true, email: true, bio: true, createdAt: true }
+      });
+
+      await prisma.$disconnect();
+
+      return res.json({ user: updatedUser });
     }
 
     await prisma.$disconnect();
