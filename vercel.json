@@ -1,7 +1,11 @@
 {
-  "name": "connecthub-frontend",
+  "name": "connecthub",
   "version": 2,
   "builds": [
+    {
+      "src": "server/index.js",
+      "use": "@vercel/node"
+    },
     {
       "src": "package.json",
       "use": "@vercel/static-build",
@@ -12,7 +16,8 @@
   ],
   "routes": [
     {
-      "handle": "filesystem"
+      "src": "/api/(.*)",
+      "dest": "/server/index.js"
     },
     {
       "src": "/(.*)",
@@ -20,6 +25,11 @@
     }
   ],
   "env": {
-    "VITE_API_URL": "@vite_api_url"
+    "NODE_ENV": "production"
+  },
+  "functions": {
+    "server/index.js": {
+      "maxDuration": 30
+    }
   }
 }

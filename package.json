@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "concurrently \"npm run server\" \"vite\"",
     "server": "nodemon server/index.js",
-    "build": "vite build",
+    "build": "npm run db:generate && vite build",
+    "vercel-build": "npm run build",
     "lint": "eslint .",
     "preview": "vite preview",
     "db:generate": "prisma generate",

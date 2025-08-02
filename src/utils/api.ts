@@ -1,6 +1,8 @@
 import { cache, CACHE_KEYS, CACHE_TTL } from './cache';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || (
+  import.meta.env.PROD ? '/api' : 'http://localhost:3001/api'
+);
 
 class ApiError extends Error {
   constructor(message: string, public status: number) {
