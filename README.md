@@ -92,12 +92,17 @@ npm install
 ```
 
 ### **3. Environment Configuration**
-Create `.env` file in the root directory:
+Copy the example environment file and configure with your values:
+```bash
+cp .env.example .env
+```
+
+Edit the `.env` file with your actual configuration:
 ```env
-# Database Configuration
+# Database Configuration - Replace with your PostgreSQL URL
 DATABASE_URL="postgresql://username:password@localhost:5432/connecthub"
 
-# JWT Secret (Generate a secure random string)
+# JWT Secret - Generate a secure random string
 JWT_SECRET="your-super-secret-jwt-key-here-make-it-long-and-random"
 
 # Server Configuration
